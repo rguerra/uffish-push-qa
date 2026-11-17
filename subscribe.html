@@ -1,0 +1,48 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>Uffish push enrollment</title>
+<style>
+  body { font: 16px/1.5 -apple-system, system-ui, sans-serif; max-width: 34rem; margin: 3rem auto; padding: 0 1rem; background:#f7f7f4; color:#22262e; }
+  button { font: inherit; padding: .6em 1.2em; border-radius: 6px; border: 1px solid #29527E; background: #29527E; color: white; cursor: pointer; }
+  pre { background: #eceae2; padding: .8em; border-radius: 6px; overflow-x: auto; font-size: .78rem; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #2F7D4B; } .err { color: #A83C3C; }
+</style>
+<h1>Enroll this device for Uffish pushes</h1>
+<p>On iPhone/iPad: first use Safari's Share &rarr; <b>Add to Home Screen</b>, then open this page from the new icon — iOS only allows notifications for installed web apps.</p>
+<p><button id="go">Enable notifications</button></p>
+<p id="status"></p>
+<div id="done" hidden>
+  <p>Copy this and paste it into Obsidian &rarr; Settings &rarr; Uffish &rarr; Integrations &rarr; Push enrollment:</p>
+  <p><button id="copy">Copy subscription</button></p>
+  <pre id="out"></pre>
+</div>
+<script>
+  const VAPID_PUBLIC_KEY = "BMIfuP9fAeOwPGquWZq0ZxsyLu4ACGmZ6ehK0eqBqm0W1QFl5lJKmbwrK1OCKYRZM1dtp9Iw-r8Fox2IB0fTlIA";
+  const status = (msg, cls) => { const el = document.getElementById('status'); el.textContent = msg; el.className = cls || ''; };
+  const b64uToBytes = (s) => {
+    const pad = '='.repeat((4 - (s.length % 4)) % 4);
+    const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  };
+  document.getElementById('go').onclick = async () => {
+    try {
+      status('registering service worker\u2026');
+      const reg = await navigator.serviceWorker.register('./sw.js');
+      await navigator.serviceWorker.ready;
+      status('requesting permission\u2026');
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { status('permission ' + perm, 'err'); return; }
+      status('subscribing\u2026');
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(VAPID_PUBLIC_KEY) });
+      const json = JSON.stringify(sub.toJSON());
+      document.getElementById('done').hidden = false;
+      document.getElementById('out').textContent = json;
+      document.getElementById('copy').onclick = () => navigator.clipboard.writeText(json).then(() => status('copied', 'ok'));
+      status('subscribed', 'ok');
+    } catch (error) {
+      status(String(error), 'err');
+    }
+  };
+</script>

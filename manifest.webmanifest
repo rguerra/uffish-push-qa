@@ -1,0 +1,9 @@
+{
+  "name": "Uffish Push",
+  "short_name": "UffishPush",
+  "start_url": "./subscribe.html",
+  "display": "standalone",
+  "background_color": "#f7f7f4",
+  "theme_color": "#29527E",
+  "icons": []
+}
